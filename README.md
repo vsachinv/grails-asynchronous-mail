@@ -41,6 +41,18 @@ For grails 4.0.x
 compile "io.github.gpc:asynchronous-mail:3.0.0"
 ```
 
+For Grails 3.3.x (Via jitpack proxy on github registry packages as for grails 3.3.x support on nexus publish not working)
+
+```groovy
+        repositories {
+                    maven { url 'https://jitpack.io' }
+                }
+```
+
+```groovy
+        compile "com.github.gpc:asynchronous-mail:2.0.3"
+```
+
 For Grails 3.3.x
 ```groovy
 compile "org.grails.plugins:asynchronous-mail:2.0.2"
