@@ -54,6 +54,7 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
     void "message should fail validation as all addresses are null"() {
         expect:
         !new AsynchronousMailMessage(
+                tenantId: 1L,
                 from: 'John Smith <john@example.com>',
                 replyTo: 'James Smith <james@example.com>',
                 subject: 'Subject',

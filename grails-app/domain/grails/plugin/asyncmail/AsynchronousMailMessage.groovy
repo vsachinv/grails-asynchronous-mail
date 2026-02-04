@@ -7,7 +7,7 @@ import org.apache.commons.lang.StringUtils
 
 import static grails.plugin.asyncmail.enums.MessageStatus.*
 
-@ToString(includeNames = true, includeFields = true,  includes = 'id,subject,to,status')
+@ToString(includeNames = true, includeFields = true,  includes = 'id,tenantId,subject,to,status')
 class AsynchronousMailMessage implements Serializable {
     /**
      * This date is accepted as the max date because different DBMSs store dates in
@@ -28,6 +28,7 @@ class AsynchronousMailMessage implements Serializable {
 
     /** Id. Need to be declared explicitly for proper @ToString output */
     Long id
+
 
     // !!! Message fields !!!
     // Sender attributes
@@ -86,6 +87,8 @@ class AsynchronousMailMessage implements Serializable {
 
     boolean markDeleteAttachments = false
 
+    Long tenantId
+
     /** Check if message can be aborted */
     boolean isAbortable() {
         return status in [CREATED, ATTEMPTED]
@@ -122,7 +125,7 @@ class AsynchronousMailMessage implements Serializable {
         table 'async_mail_mess'
 
         from column: 'from_column'
-
+        tenantId column: 'tenant_id', index: 'idx_async_mail_tenant'
         to(
                 indexColumn: 'to_idx',
                 fetch: 'join',
@@ -177,6 +180,7 @@ class AsynchronousMailMessage implements Serializable {
         def mailboxValidator = { String value ->
             return value == null || Validator.isMailbox(value)
         }
+        tenantId(nullable: false)
 
         // Message fields
         from(nullable: true, maxSize: MAX_EMAIL_ADDR_SIZE, validator: mailboxValidator)
@@ -247,5 +251,6 @@ class AsynchronousMailMessage implements Serializable {
         maxAttemptsCount(min: 1)
         lastAttemptDate(nullable: true)
         attemptInterval(min: 0l)
+
     }
 }
