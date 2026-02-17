@@ -76,6 +76,7 @@ class AsynchronousMailMessageBuilderSpec extends Specification implements DataTe
             to 'john@example.com'
             subject 'Subject'
             text 'Text'
+            tenantId 1L
         }
         AsynchronousMailMessageBuilder builder
         AsynchronousMailMessage message

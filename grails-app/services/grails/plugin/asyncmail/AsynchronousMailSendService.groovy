@@ -11,7 +11,7 @@ class AsynchronousMailSendService {
     TenantMailService tenantMailService
 
     MailMessage send(AsynchronousMailMessage message) {
-        return tenantMailService.sendMail(message.tenantId) {
+        return tenantMailService.sendMail {
             if (isMimeCapable() && (message.attachments || (message.html && message.alternative))) {
                 multipart true
             }
