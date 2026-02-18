@@ -1,6 +1,5 @@
 package grails.plugin.asyncmail
 
-import grails.gorm.multitenancy.Tenant
 import grails.plugins.mail.MailService
 import grails.plugins.mail.oauth.TenantMailService
 import groovy.transform.CompileStatic
@@ -11,7 +10,7 @@ class AsynchronousMailSendService {
     TenantMailService tenantMailService
 
     MailMessage send(AsynchronousMailMessage message) {
-        return tenantMailService.sendMail {
+        return tenantMailService.sendMailWithTenant(message.tenantId) {
             if (isMimeCapable() && (message.attachments || (message.html && message.alternative))) {
                 multipart true
             }
