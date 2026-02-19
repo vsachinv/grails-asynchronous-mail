@@ -15,6 +15,9 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven { url 'https://repo.grails.org/grails/core' }
+    maven { url "http://10.100.21.16:8080/repository/common-component-snapshots"
+        allowInsecureProtocol = true
+    }
 }
 
 configurations {
@@ -38,7 +41,7 @@ dependencies {
     implementation 'org.hibernate:hibernate-core:5.6.15.Final'
     implementation 'org.grails.plugins:gsp'
     implementation 'org.grails.plugins:mail:4.0.0'
-    implementation 'org.grails.plugins:mail-oauth:6.0-JDK11-1.0-M8'
+    implementation 'org.grails.plugins:mail-oauth:7.5-JDK11-1.0-M1'
     // This is needed for the quartz-plugin on grails >= 4.0.x, https://github.com/grails-plugins/grails-quartz/issues/107#issuecomment-575951471
     implementation('org.quartz-scheduler:quartz:2.3.2') { exclude group: 'slf4j-api', module: 'c3p0' }
     implementation 'org.grails.plugins:quartz:2.0.13'
