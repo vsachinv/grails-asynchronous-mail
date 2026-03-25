@@ -43,6 +43,10 @@ class AsynchronousMailProcessService {
             for (int i = 0; i < taskCount; i++) {
                 promises << task {
                     AsynchronousMailMessage.withNewSession {
+                        // Set VPD no-tenant context on this new session so that
+                        // getMessage/save/delete can access messages across all tenants
+                        asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
+
                         Long messageId
                         while ((messageId = idsQueue.poll()) != null) {
                             try {
