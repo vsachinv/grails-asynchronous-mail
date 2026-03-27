@@ -43,19 +43,22 @@ class AsynchronousMailProcessService {
             for (int i = 0; i < taskCount; i++) {
                 promises << task {
                     AsynchronousMailMessage.withNewSession {
-                        // Set VPD no-tenant context on this new session so that
-                        // getMessage/save/delete can access messages across all tenants
-                        asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
 
                         Long messageId
                         while ((messageId = idsQueue.poll()) != null) {
                             try {
+                                // Set VPD no-tenant context on this new session so that
+                                // getMessage/save/delete can access messages across all tenants
+                                asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
                                 processEmailMessage(messageId)
                             } catch (Exception e) {
                                 log.error(
                                         "An exception was thrown when attempt to send a message with id=${messageId}.",
                                         e
                                 )
+                            }finally {
+                                //Reset Again
+                                asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
                             }
                         }
 
