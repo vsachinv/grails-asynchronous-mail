@@ -35,14 +35,6 @@ class AsynchronousMailMessage implements Serializable {
     String from
     String replyTo
 
-    // Receiver attributes
-    List<String> to
-    List<String> cc
-    List<String> bcc
-
-    /** Additional headers */
-    Map<String, String> headers
-
     // Envelope from field
     String envelopeFrom
 
@@ -118,62 +110,82 @@ class AsynchronousMailMessage implements Serializable {
         return status == ABORT
     }
 
-    static transients = ['abortable']
+    static transients = ['abortable', 'to', 'bcc', 'cc', 'headers']
 
-    static hasMany = [to: String, cc: String, bcc: String, attachments: AsynchronousMailAttachment]
+    /**
+     * Public API preservation: callers (builder, send service, downstream apps) read and
+     * write {@code to}/{@code bcc}/{@code cc} as {@code List<String>} and {@code headers}
+     * as {@code Map<String,String>}. Internally those map onto {@code toEntries},
+     * {@code bccEntries}, {@code ccEntries}, {@code headerEntries} which carry their own
+     * {@code tenantId}.
+     */
+    List<String> getTo() {
+        toEntries == null ? null : toEntries.sort(false) { it.position ?: 0 }*.address
+    }
+
+    void setTo(List<String> list) {
+        toEntries?.collect { it }?.each { removeFromToEntries(it) }
+        list?.eachWithIndex { String addr, int idx ->
+            addToToEntries(new AsynchronousMailTo(address: addr, position: idx))
+        }
+    }
+
+    List<String> getBcc() {
+        bccEntries == null ? null : bccEntries.sort(false) { it.position ?: 0 }*.address
+    }
+
+    void setBcc(List<String> list) {
+        bccEntries?.collect { it }?.each { removeFromBccEntries(it) }
+        list?.eachWithIndex { String addr, int idx ->
+            addToBccEntries(new AsynchronousMailBcc(address: addr, position: idx))
+        }
+    }
+
+    List<String> getCc() {
+        ccEntries == null ? null : ccEntries.sort(false) { it.position ?: 0 }*.address
+    }
+
+    void setCc(List<String> list) {
+        ccEntries?.collect { it }?.each { removeFromCcEntries(it) }
+        list?.eachWithIndex { String addr, int idx ->
+            addToCcEntries(new AsynchronousMailCc(address: addr, position: idx))
+        }
+    }
+
+    Map<String, String> getHeaders() {
+        headerEntries == null ? null : headerEntries.collectEntries { [(it.name): it.value] }
+    }
+
+    void setHeaders(Map<String, String> map) {
+        headerEntries?.collect { it }?.each { removeFromHeaderEntries(it) }
+        map?.each { String key, String value ->
+            addToHeaderEntries(new AsynchronousMailHeader(name: key, value: value))
+        }
+    }
+
+    static hasMany = [
+            attachments   : AsynchronousMailAttachment,
+            toEntries     : AsynchronousMailTo,
+            bccEntries    : AsynchronousMailBcc,
+            ccEntries     : AsynchronousMailCc,
+            headerEntries : AsynchronousMailHeader
+    ]
+
     static mapping = {
         table 'async_mail_mess'
 
         from column: 'from_column'
         tenantId column: 'tenant_id', index: 'idx_async_mail_tenant'
-        to(
-                indexColumn: 'to_idx',
-                fetch: 'join',
-                joinTable: [
-                        name: 'async_mail_to',
-                        length: MAX_EMAIL_ADDR_SIZE,
-                        key: 'message_id',
-                        column: 'to_string'
-                ]
-        )
-
-        cc(
-                indexColumn: 'cc_idx',
-                fetch: 'join',
-                joinTable: [
-                        name: 'async_mail_cc',
-                        length: MAX_EMAIL_ADDR_SIZE,
-                        key: 'message_id',
-                        column: 'cc_string'
-                ]
-        )
-
-        bcc(
-                indexColumn: 'bcc_idx',
-                fetch: 'join',
-                joinTable: [
-                        name: 'async_mail_bcc',
-                        length: MAX_EMAIL_ADDR_SIZE,
-                        key: 'message_id',
-                        column: 'bcc_string'
-                ]
-        )
-
-        headers(
-                indexColumn: [name: 'header_name', length: 255],
-                fetch: 'join',
-                joinTable: [
-                        name: 'async_mail_header',
-                        key: 'message_id',
-                        column: 'header_value'
-                ]
-        )
 
         text type: 'text'
-        
+
         alternative type: 'text'
 
-        attachments cascade: "all-delete-orphan"
+        attachments cascade: 'all-delete-orphan'
+        toEntries cascade: 'all-delete-orphan'
+        bccEntries cascade: 'all-delete-orphan'
+        ccEntries cascade: 'all-delete-orphan'
+        headerEntries cascade: 'all-delete-orphan'
     }
 
     static constraints = {

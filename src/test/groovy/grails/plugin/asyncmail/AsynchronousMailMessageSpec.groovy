@@ -11,6 +11,11 @@ import static grails.plugin.asyncmail.enums.MessageStatus.*
  */
 class AsynchronousMailMessageSpec extends Specification implements DomainUnitTest<AsynchronousMailMessage> {
 
+    Class[] getDomainClassesToMock() {
+        [AsynchronousMailTo, AsynchronousMailBcc, AsynchronousMailCc,
+         AsynchronousMailHeader, AsynchronousMailAttachment] as Class[]
+    }
+
     void "testing default constructor"() {
         setup:
         AsynchronousMailMessage message = new AsynchronousMailMessage()

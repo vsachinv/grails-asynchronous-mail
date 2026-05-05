@@ -17,7 +17,8 @@ class AsynchronousMailMessageBuilderSpec extends Specification implements DataTe
     AsynchronousMailMessageBuilderFactory asynchronousMailMessageBuilderFactory
 
     void setupSpec() {
-        mockDomain AsynchronousMailMessage
+        mockDomains AsynchronousMailMessage, AsynchronousMailTo, AsynchronousMailBcc,
+                AsynchronousMailCc, AsynchronousMailHeader, AsynchronousMailAttachment
     }
 
     void setup() {
