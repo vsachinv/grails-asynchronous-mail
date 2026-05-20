@@ -123,7 +123,11 @@ class AsynchronousMailProcessService {
                     message.status = MessageStatus.ATTEMPTED
                 }
             }catch (IllegalStateException | IllegalArgumentException e) {
-                log.warn("Configuration error for message id=${message.id}", e)
+                log.error("Configuration error for message id=${message.id}", e)
+                message.status = MessageStatus.ERROR
+            }catch (Exception e){
+                log.error("Exception thrown when attempt to send a message with id=${messageId}.",
+                        e)
                 message.status = MessageStatus.ERROR
             } finally {
                 asynchronousMailPersistenceService.save(message, useFlushOnSave, false)
