@@ -11,6 +11,11 @@ import static grails.plugin.asyncmail.enums.MessageStatus.*
  */
 class AsynchronousMailMessageSpec extends Specification implements DomainUnitTest<AsynchronousMailMessage> {
 
+    Class[] getDomainClassesToMock() {
+        [AsynchronousMailTo, AsynchronousMailBcc, AsynchronousMailCc,
+         AsynchronousMailHeader, AsynchronousMailAttachment] as Class[]
+    }
+
     void "testing default constructor"() {
         setup:
         AsynchronousMailMessage message = new AsynchronousMailMessage()
@@ -42,6 +47,7 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
     void "message should pass validation"() {
         expect:
         new AsynchronousMailMessage(
+                tenantId: 1L,
                 from: 'John Smith <john@example.com>',
                 replyTo: 'James Smith <james@example.com>',
                 cc: ['Mary Smith <mary@example.com>', 'carl@example.com'],
@@ -54,6 +60,7 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
     void "message should fail validation as all addresses are null"() {
         expect:
         !new AsynchronousMailMessage(
+                tenantId: 1L,
                 from: 'John Smith <john@example.com>',
                 replyTo: 'James Smith <james@example.com>',
                 subject: 'Subject',
@@ -257,6 +264,7 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
     void "message with headers should pass validation"() {
         expect:
         new AsynchronousMailMessage(
+                tenantId: 1L,
                 from: 'John Smith <john@example.com>',
                 to: ['Mary Smith <mary@example.com>'],
                 subject: 'Subject',
@@ -274,6 +282,6 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
         message.id = 1
 
         expect:
-        message.toString() == 'grails.plugin.asyncmail.AsynchronousMailMessage(id:1, subject:Subject, to:[Mary Smith <mary@example.com>, carl@example.com], status:CREATED)'
+        message.toString() == 'grails.plugin.asyncmail.AsynchronousMailMessage(id:1, tenantId: null, subject:Subject, to:[Mary Smith <mary@example.com>, carl@example.com], status:CREATED)'
     }
 }
