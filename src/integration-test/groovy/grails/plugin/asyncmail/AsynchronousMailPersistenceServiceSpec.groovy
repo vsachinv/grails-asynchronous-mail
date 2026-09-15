@@ -20,6 +20,7 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
     void testCycle() {
         given: "a message"
             AsynchronousMailMessage message = new AsynchronousMailMessage(
+                    tenantId: 1L,
                     from: 'John Smith <john@example.com>',
                     to: ['Mary Smith <mary@example.com>'],
                     subject: 'Subject',
@@ -54,6 +55,7 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
     void testDeleteAttachments() {
         given: "a message"
             AsynchronousMailMessage message = new AsynchronousMailMessage(
+                    tenantId: 1L,
                     from: 'John Smith <john@example.com>',
                     to: ['Mary Smith <mary@example.com>'],
                     subject: 'Subject',
@@ -90,6 +92,7 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
     void testSaveSimpleMessage() {
         setup:
             AsynchronousMailMessage message = new AsynchronousMailMessage(
+                    tenantId: 1L,
                     bcc: ['mary@example.com'],
                     subject: 'Subject',
                     text: 'Text'
@@ -108,6 +111,7 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
     void testUpdateExpiredMessages() {
         when: 'message is saved with expired endDate'
             AsynchronousMailMessage message = new AsynchronousMailMessage(
+                    tenantId: 1L,
                     from: 'John Smith <john@example.com>',
                     to: ['Mary Smith <mary@example.com>'],
                     subject: 'Subject',

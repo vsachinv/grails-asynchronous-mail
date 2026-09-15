@@ -40,6 +40,7 @@ class AsynchronousMailProcessServiceIntegrationSpec extends Specification implem
             ) {
                 for (int i = 0; i < messageCount; i++) {
                     new AsynchronousMailMessage(
+                            tenantId: 1L,
                             from: 'john.smith@example.com',
                             to: ['jane.smith@example.con'],
                             subject: 'Subject',
@@ -79,6 +80,7 @@ class AsynchronousMailProcessServiceIntegrationSpec extends Specification implem
             ) {
                 for (int i = 0; i < 5; i++) {
                     new AsynchronousMailMessage(
+                            tenantId: 1L,
                             from: 'john.smith@example.com',
                             to: ['jane.smith@example.con'],
                             subject: 'Subject',
@@ -101,6 +103,7 @@ class AsynchronousMailProcessServiceIntegrationSpec extends Specification implem
             ) {
                 for (int i = 0; i < 5; i++) {
                     new AsynchronousMailMessage(
+                            tenantId: 1L,
                             from: 'john.smith@example.com',
                             to: ['jane.smith@example.con'],
                             subject: 'Subject',
@@ -129,6 +132,7 @@ class AsynchronousMailProcessServiceIntegrationSpec extends Specification implem
                     propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW
             ) {
                 new AsynchronousMailMessage(
+                        tenantId: 1L,
                         from: 'john.smith@example.com',
                         subject: 'Subject',
                         text: 'Body'

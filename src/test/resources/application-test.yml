@@ -12,4 +12,5 @@ dataSource:
   username: sa
   password: ''
   dbCreate: update
-  url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+  # INIT registers a stand-in for the Oracle VPD procedure PKG_MART_SET_CONTEXT.SET_CONTEXT (see H2VpdContextStub)
+  url: "jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS PKG_MART_SET_CONTEXT\\;CREATE ALIAS IF NOT EXISTS PKG_MART_SET_CONTEXT.SET_CONTEXT FOR 'grails.plugin.asyncmail.H2VpdContextStub.setContext'"

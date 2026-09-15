@@ -4,7 +4,7 @@ import grails.testing.mixin.integration.Integration
 import grails.gorm.transactions.Rollback
 import spock.lang.Specification
 
-import javax.annotation.Resource
+import jakarta.annotation.Resource
 
 import static grails.plugin.asyncmail.enums.MessageStatus.CREATED
 
@@ -23,6 +23,7 @@ class AsyncMailServiceSpec extends Specification {
     void testSendAsynchronousMail() {
         when:
             asyncMailService.sendMail {
+                tenantId 1L
                 to VALUE_MAIL
                 subject 'Test'
                 text 'Test'

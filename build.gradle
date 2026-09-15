@@ -1,66 +1,79 @@
-plugins {
-    id 'eclipse'
-    id 'idea'
-    id 'org.grails.grails-plugin'
-    id 'com.bertramlabs.asset-pipeline'
-    id 'org.grails.grails-gsp'
-    id 'maven-publish'
-    id 'signing'
-    id "com.gorylenko.gradle-git-properties"
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url = 'https://repo.grails.org/grails/restricted' }
+    }
+    dependencies {
+        classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+        classpath 'org.apache.grails:grails-gradle-plugins'
+        classpath 'cloud.wondrify:asset-pipeline-gradle:5.0.34'
+        classpath 'com.gorylenko.gradle-git-properties:gradle-git-properties:4.0.1'
+        classpath 'io.github.gradle-nexus:publish-plugin:1.3.0'
+    }
 }
+
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
+apply plugin: 'cloud.wondrify.asset-pipeline'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+apply plugin: 'com.gorylenko.gradle-git-properties'
 
 group = 'io.github.gpc'
 
 repositories {
     mavenLocal()
     mavenCentral()
-    maven { url 'https://repo.grails.org/grails/core' }
-    maven { url "http://10.100.21.16:8080/repository/common-component-snapshots"
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'http://10.100.21.16:8080/repository/common-component-snapshots'
         allowInsecureProtocol = true
     }
 }
 
-configurations {
-    configureEach {
-        resolutionStrategy.force 'org.codehaus.groovy:groovy-xml:3.0.13'
-    }
-}
-
 dependencies {
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
 
-    compileOnly 'io.micronaut:micronaut-inject-groovy'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-logging'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails.i18n:grails-i18n'
+    implementation 'org.apache.grails:grails-controllers'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-async'
+    implementation 'org.apache.grails:grails-scaffolding'
+    implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails.views:grails-web-gsp'
+    implementation 'org.apache.grails.views:grails-web-gsp-taglib'
 
-    implementation 'org.grails:grails-logging'
-    implementation 'org.grails:grails-plugin-rest'
-    implementation 'org.grails:grails-plugin-databinding'
-    implementation 'org.grails:grails-plugin-i18n'
-    implementation 'org.grails:grails-plugin-services'
-    implementation 'org.grails.plugins:async'
-    implementation 'org.grails.plugins:scaffolding'
-    implementation 'org.grails.plugins:hibernate5'
-    implementation 'org.hibernate:hibernate-core:5.6.15.Final'
-    implementation 'org.grails.plugins:gsp'
-    implementation 'org.grails.plugins:mail:4.0.0'
-    implementation 'org.grails.plugins:mail-oauth:7.5-JDK11-1.0-M12'
-    // This is needed for the quartz-plugin on grails >= 4.0.x, https://github.com/grails-plugins/grails-quartz/issues/107#issuecomment-575951471
-    implementation('org.quartz-scheduler:quartz:2.3.2') { exclude group: 'slf4j-api', module: 'c3p0' }
-    implementation 'org.grails.plugins:quartz:2.0.13'
+    implementation 'org.grails.plugins:grails-mail:5.0.3'
+    implementation 'org.grails.plugins:mail-oauth:7.6.0-M1'
+    implementation "org.apache.grails:grails-quartz:$grailsVersion"
+    // Used by Validator.java; no longer provided transitively by GORM in Grails 7.
+    implementation 'commons-validator:commons-validator:1.9.0'
+
+    assets 'org.apache.grails:grails-dependencies-assets'
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
-
     testImplementation 'org.springframework.boot:spring-boot-starter-tomcat'
-    //testImplementation "ch.qos.logback:logback-classic:1.2.12"
-    //testImplementation "ch.qos.logback:logback-core:1.2.12"
-    testImplementation 'io.micronaut:micronaut-inject-groovy'
-    testImplementation 'org.grails:grails-gorm-testing-support'
-    testImplementation 'org.grails:grails-web-testing-support'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy-agent'
 }
 
+compileJava.options.release = 17
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+// https://github.com/apache/grails-core/issues/15321
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.optimizationOptions.indy = false
 }
 
 tasks.withType(Test).configureEach {
@@ -72,23 +85,37 @@ bootJar.enabled = false
 
 assets {
     packagePlugin = true
+    minifyJs = true
+    minifyCss = true
 }
 
-task sourceJar(type: Jar) {
-    classifier = 'sources'
+// assetPluginPackage defaults its destinationDirectory to build/resources/main, which processResources
+// then cleans, deleting META-INF/assets before the jar is built. Give the task its own directory and
+// package the jar from there. Must be inside afterEvaluate: the asset-pipeline plugin sets the
+// destination in its own afterEvaluate and would overwrite a config-time assignment.
+def packagedAssetsDir = layout.buildDirectory.dir('packagedAssets')
+afterEvaluate {
+    tasks.named('assetPluginPackage') {
+        destinationDirectory = packagedAssetsDir.map { it.dir('META-INF') }
+    }
+}
+
+tasks.register('sourceJar', Jar) {
+    dependsOn generateGitProperties   // main resources include build/generated/resources/git
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
+    exclude 'git.properties'
 }
 
-task packageJavadoc(type: Jar) {
+tasks.register('packageJavadoc', Jar) {
     from javadoc
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
 }
 
-task packageGroovydoc(type: Jar) {
+tasks.register('packageGroovydoc', Jar) {
     from groovydoc
-    classifier = 'groovydoc'
+    archiveClassifier = 'groovydoc'
 }
-
 
 gitProperties {
     keys = ['git.branch', 'git.commit.id', 'git.commit.time', 'git.commit.id.abbrev']
@@ -99,22 +126,19 @@ gitProperties {
 javadoc {
     source = sourceSets.main.allJava
     classpath = configurations.compileClasspath
-    options
-            {
-                setMemberLevel JavadocMemberLevel.PUBLIC
-                setAuthor true
-
-                links "https://docs.oracle.com/javase/8/docs/api/"
-            }
+    options {
+        setMemberLevel JavadocMemberLevel.PUBLIC
+        setAuthor true
+        links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
+    }
 }
-
 
 generateGitProperties.outputs.upToDateWhen { false } // make sure the generateGitProperties task always executes (even when git.properties is not changed)
 
 jar {
     enabled = true
     archiveClassifier = ''
-    dependsOn generateGitProperties
+    dependsOn generateGitProperties, tasks.named('assetPluginPackage')
     manifest {
         attributes("Built-By": System.getProperty("user.name"))
         attributes(["Plugin-Version"        : version,
@@ -124,6 +148,7 @@ jar {
                     "Git-Branch"            : "${-> project.ext.gitProps['git.branch']}"])
     }
     from sourceSets.main.output
+    from packagedAssetsDir
     exclude 'git.properties'
 }
 
@@ -210,6 +235,10 @@ publishing {
                         id = 'vsachinv'
                         name = 'Sachin Verma'
                     }
+                    developer {
+                        id = 'rx-deepak-goyal'
+                        name = 'Deepak Goyal'
+                    }
                 }
                 scm {
                     connection = 'scm:git:git://github.com/gpc/grails-asynchronous-mail.git'
@@ -223,7 +252,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/gpc/grails-asynchronous-mail1"
+            url = uri("https://maven.pkg.github.com/gpc/grails-asynchronous-mail1")
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
                 password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
@@ -233,10 +262,13 @@ publishing {
         maven {
             name = "NexusRepo"
             credentials {
-                username project.findProperty("nexusUsername") ?: System.getenv("NEXUS_USERNAME")
-                password project.findProperty("nexusPassword") ?: System.getenv("NEXUS_PASSWORD")
+                username = project.findProperty("nexusUsername") ?: System.getenv("NEXUS_USERNAME")
+                password = project.findProperty("nexusPassword") ?: System.getenv("NEXUS_PASSWORD")
             }
-            url project.findProperty("nexusUrl") ?: System.getenv("NEXUS_URL")
+            def nexusRepoUrl = project.findProperty("nexusUrl") ?: System.getenv("NEXUS_URL")
+            if (nexusRepoUrl) {
+                url = uri(nexusRepoUrl)
+            }
             allowInsecureProtocol = true
         }
     }
@@ -259,7 +291,7 @@ tasks.withType(Sign).configureEach {
     onlyIf { isReleaseVersion }
 }
 
-if(project.hasProperty('release')) {
+if (project.hasProperty('release')) {
     apply plugin: 'io.github.gradle-nexus.publish-plugin'
     nexusPublishing {
         repositories {
