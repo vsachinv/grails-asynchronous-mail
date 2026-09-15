@@ -43,6 +43,7 @@ class AsynchronousMailProcessServiceSpec extends Specification implements Servic
     void testProcessEmail() {
         setup:
             AsynchronousMailMessage message = new AsynchronousMailMessage(
+                    tenantId: 1L,
                     from: 'John Smith <john@example.com>',
                     to: ['Mary Smith <mary@example.com>'],
                     subject: 'Subject',

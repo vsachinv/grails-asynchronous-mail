@@ -12,7 +12,7 @@ import static grails.plugin.asyncmail.enums.MessageStatus.*
 class AsynchronousMailMessageSpec extends Specification implements DomainUnitTest<AsynchronousMailMessage> {
 
     Class[] getDomainClassesToMock() {
-        [AsynchronousMailTo, AsynchronousMailBcc, AsynchronousMailCc,
+        [AsynchronousMailMessage, AsynchronousMailTo, AsynchronousMailBcc, AsynchronousMailCc,
          AsynchronousMailHeader, AsynchronousMailAttachment] as Class[]
     }
 
@@ -282,6 +282,6 @@ class AsynchronousMailMessageSpec extends Specification implements DomainUnitTes
         message.id = 1
 
         expect:
-        message.toString() == 'grails.plugin.asyncmail.AsynchronousMailMessage(id:1, tenantId: null, subject:Subject, to:[Mary Smith <mary@example.com>, carl@example.com], status:CREATED)'
+        message.toString() == 'grails.plugin.asyncmail.AsynchronousMailMessage(id:1, tenantId:null, subject:Subject, to:[Mary Smith <mary@example.com>, carl@example.com], status:CREATED)'
     }
 }

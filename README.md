@@ -25,6 +25,18 @@ Installation
 
 To install just add the plugin to the plugins block of `build.gradle`:
 
+For Grails 7.0.x (Java 17, Spring Boot 3, Jakarta EE). Requires the `grails-mail` 5.x and `mail-oauth` 7.6.x plugins.
+```groovy
+implementation "io.github.gpc:asynchronous-mail:7.6.0-M1"
+```
+
+
+For Grails 6.x.x with MT support
+```groovy
+implementation "io.github.gpc:asynchronous-mail:7.5-JDK11-1.0-M14"
+```
+
+
 For Grails 6.x.x
 ```groovy
 implementation "io.github.gpc:asynchronous-mail:4.0.0-SNAPSHOT"
