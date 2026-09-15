@@ -53,7 +53,7 @@ class AsynchronousMailAttachmentSpec extends Specification implements DomainUnit
         attachment =  new AsynchronousMailAttachment(
                 attachmentName:'name',
                 content:'Grails'.getBytes(),
-                message: new AsynchronousMailMessage()
+                message: new AsynchronousMailMessage(tenantId: 1L)
         )
 
         then: 'should pass all validations'

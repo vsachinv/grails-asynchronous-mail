@@ -255,6 +255,10 @@ class AsynchronousMailMessageBuilder {
         message.subject = string
     }
 
+    void tenantId(Long tenantId) {
+        message.tenantId = tenantId
+    }
+
     // Body
     void body(CharSequence seq) {
         text(seq)

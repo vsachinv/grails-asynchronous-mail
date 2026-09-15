@@ -8,6 +8,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class AsynchronousMailJob {
     static triggers = {}
+    static description = "Periodically picks up pending/retry emails from the database and sends them via SMTP/GRAPH across all tenants"
 
     static concurrent = false
     static group = "AsynchronousMail"

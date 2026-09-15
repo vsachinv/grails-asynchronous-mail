@@ -10,11 +10,19 @@ class AsynchronousMailAttachment implements Serializable {
     String mimeType = DEFAULT_MIME_TYPE
     byte[] content
     boolean inline = false
+    Long tenantId
+
+    def beforeValidate() {
+        if (tenantId == null){
+            tenantId = message?.tenantId
+        }
+    }
 
     static belongsTo = [message:AsynchronousMailMessage]
 
     static mapping = {
         table 'async_mail_attachment'
+        tenantId column: 'tenant_id', index: 'idx_async_mail_attachment_tenant'
         version false
     }
 
@@ -22,5 +30,6 @@ class AsynchronousMailAttachment implements Serializable {
         attachmentName(blank:false)
         //mimeType()
         content(maxSize:SIZE_30_MB)
+        tenantId(nullable: false)
     }
 }

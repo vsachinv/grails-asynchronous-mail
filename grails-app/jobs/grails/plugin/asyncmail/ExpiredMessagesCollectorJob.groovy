@@ -5,6 +5,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class ExpiredMessagesCollectorJob {
     static triggers = {}
+    static description = "Periodically marks unsent emails as EXPIRED if their endDate has passed"
 
     static concurrent = false
     static group = "AsynchronousMail"
