@@ -11,8 +11,8 @@ and sends them through the `grails-mail` / `mail-oauth` plugins. This is RxLogix
 exist upstream. The plugin version tracks the internal `mail-oauth` fork line (`7.6.0-Mx`), not upstream semver.
 
 Stack on this branch: Apache Grails 7.0.16, Java 17, Spring Boot 3.5, Groovy 4, Hibernate 5.6 (GORM 9), Gradle 8.14,
-Jakarta EE. Plugin dependencies: `org.apache.grails:grails-quartz:7.0.16`, `org.grails.plugins:grails-mail:5.0.3`,
-`org.grails.plugins:mail-oauth:7.6.0-M1` (internal fork, resolved from `mavenLocal()` or the internal Nexus).
+Jakarta EE. Plugin dependencies: `org.apache.grails:grails-quartz:7.0.16`, `org.apache.grails:grails-mail` (BOM, 7.0.16),
+`org.grails.plugins:mail-oauth:7.6.0-M2` (also depends on the first-party grails-mail) (internal fork, resolved from `mavenLocal()` or the internal Nexus).
 The `6.x-*` branches are the Grails 6 / Java 11 line. `GRAILS7_MIGRATION_PLAN.md` records the 6 -> 7 migration,
 its version decisions and the verification baseline.
 
@@ -67,7 +67,7 @@ therefore need `-x generateGitProperties`.
   `H2VpdContextStub` (`src/integration-test`) so the Oracle VPD call succeeds. Keep the stub if you touch that URL.
 - The test `Application` in `grails-app/init` (`@PluginSource`, not bootstrapped by host apps) defines two beans a host
   app would otherwise provide for mail-oauth: `mailService` pinned to the default `mailMessageBuilderFactory`
-  (grails-mail 5.x constructor-injects the factory and mail-oauth registers three), and a stub `tenantContextProvider`.
+  (grails-mail 7.x constructor-injects the factory and mail-oauth registers three), and a stub `tenantContextProvider`.
   A `@Configuration` class under `src/integration-test` is not component-scanned, so it does not work as an alternative.
 - Every table has a NOT NULL `tenant_id`, so every fixture must set `tenantId` (`tenantId: 1L` on domain objects,
   `tenantId 1L` inside `sendMail {}` closures).
@@ -97,7 +97,7 @@ Send path (all in package `grails.plugin.asyncmail`):
 
 Both jobs have empty static `triggers`; `AsynchronousMailGrailsPlugin.onStartup` unschedules any stale triggers (cluster
 safety) and schedules them from `asynchronous.mail.send.repeat.interval` / `expired.collector.repeat.interval`.
-Nothing is scheduled when `asynchronous.mail.disable=true`. The descriptor declares `dependsOn = [mail: "* > 5.0.0"]`
+Nothing is scheduled when `asynchronous.mail.disable=true`. The descriptor declares `dependsOn = [mail: "* > 7.0.14"]` (first-party grails-mail)
 and loads after `mail`, `mailOauth`, `quartz` and the persistence plugins.
 
 Configuration defaults are in `grails-app/conf/plugin.groovy` and read through `AsynchronousMailConfigService`
