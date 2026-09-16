@@ -13,7 +13,7 @@ import org.quartz.TriggerKey
 class AsynchronousMailGrailsPlugin extends Plugin {
 
     def grailsVersion = "7.0.0 > *"
-    def dependsOn = [mail: "* > 5.0.0"]
+    def dependsOn = [mail: "* > 7.0.14"]
     def loadAfter = ['mail', 'mailOauth', 'quartz', 'hibernate', 'hibernate3', 'hibernate4', 'hibernate5', 'mongodb']
 
     @Override

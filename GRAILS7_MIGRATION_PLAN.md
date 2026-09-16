@@ -4,7 +4,7 @@
 **Branch:** `task/7.x-upgrade`
 **Rollback point:** commit `3c4075b` (pre-flight tag check was skipped at the user's request; no `pre-grails7-migration` tag exists)
 **Plan date:** 2026-09-16
-**Status:** APPLIED — all changes made, unit + integration tests green, published to mavenLocal. Not committed.
+**Status:** APPLIED and committed (`c89b739`, pushed). Follow-ups: mail plugin switched to first-party `org.apache.grails:grails-mail:7.0.16`; mail-oauth bumped to 7.6.0-M2.
 
 ---
 
@@ -17,15 +17,15 @@
 | Gradle | 7.6.3 | **8.14.4** | Grails 7 Gradle plugin requires Gradle 8. |
 | Spring Boot | 2.7.x | **3.5.16** | Managed by `grails-bom 7.0.16`. |
 | Groovy | 3.0.x | **4.0.33** | Managed by the BOM. |
-| Plugin version | `7.5-JDK11-1.0-M14` | **`7.6.0-M1`** | Confirmed by the user. Aligns with the mail-oauth fork's Grails 7 line (not the generic `7.0.0-M1`). |
+| Plugin version | `7.5-JDK11-1.0-M14` | **`7.6.0-M2`** | Confirmed by the user (M1 was the initial migration build). Aligns with the mail-oauth fork's Grails 7 line (not the generic `7.0.0-M1`). |
 | Group / artifact | `io.github.gpc:asynchronous-mail` | unchanged | |
 
 ### Third-party plugin coordinates
 
 | Plugin | Current | Target | Notes |
 |---|---|---|---|
-| mail | `org.grails.plugins:mail:4.0.0` | `org.grails.plugins:grails-mail:5.0.3` | Confirmed by the user. Renamed artifact. Plugin name stays `mail`, declares `grailsVersion 7.0.0 > *`, uses `jakarta.mail`. The Apache `org.apache.grails:grails-mail` artifact only exists as 8.0.0 milestones and must not be used. |
-| mail-oauth (RxLogix fork) | `org.grails.plugins:mail-oauth:7.5-JDK11-1.0-M12` | `org.grails.plugins:mail-oauth:7.6.0-M1` | Confirmed by the user. Plugin name `mailOauth`, `dependsOn mail > 5.0.0`, provides `grails.plugins.mail.oauth.TenantMailService`. |
+| mail | `org.grails.plugins:mail:4.0.0` | `org.apache.grails:grails-mail:7.0.16` (BOM) | Final choice by the user, superseding an interim `org.grails.plugins:grails-mail:5.0.3`. Identical class list and API to 5.0.3, plugin name `mail`. With mail-oauth 7.6.0-M2 (which itself depends on `org.apache.grails:grails-mail`) no exclusion is needed; the interim M1 build required excluding its transitive `org.grails.plugins:grails-mail:5.0.3`. |
+| mail-oauth (RxLogix fork) | `org.grails.plugins:mail-oauth:7.5-JDK11-1.0-M12` | `org.grails.plugins:mail-oauth:7.6.0-M2` | Final choice by the user (M1 was interim; M2 is built on grails-bom 7.0.16 and the first-party grails-mail). Plugin name `mailOauth`, `dependsOn mail > 5.0.0`, provides `grails.plugins.mail.oauth.TenantMailService`. |
 | quartz | `org.grails.plugins:quartz:2.0.13` + `org.quartz-scheduler:quartz:2.3.2` | `org.apache.grails:grails-quartz:7.0.16` (+ quartz 2.5.2) | Final choice by the user (superseding an interim 4.0.1). Same version as the BOM manages. Plugin name stays `quartz`. |
 | hibernate5 | `org.grails.plugins:hibernate5` + pinned `hibernate-core:5.6.15.Final` | `org.apache.grails:grails-data-hibernate5` (BOM) | Drop the explicit hibernate-core pin and the `groovy-xml:3.0.13` force. |
 | async | `org.grails.plugins:async` | `org.apache.grails:grails-async` (BOM) | Used by `AsynchronousMailProcessService` (`grails.async.Promises`). |
@@ -86,16 +86,16 @@ None found. No `GrailsWebMockUtil`, `ServletContextHolder`, `ClassRelativeResour
 |---|---|---|
 | M1 | `build.gradle` | Rewrite to the `buildscript {}` style. Details in 3.1. |
 | M2 | `buildSrc/` | Delete the directory. Its role moves to the `buildscript {}` classpath. |
-| M3 | `gradle.properties` | `grailsVersion=7.0.16`, `version=7.6.0-M1`, `springBootVersion=3.5.16`, add `org.gradle.caching=true`. |
+| M3 | `gradle.properties` | `grailsVersion=7.0.16`, `version=7.6.0-M2`, `springBootVersion=3.5.16`, add `org.gradle.caching=true`. |
 | M4 | `settings.gradle` | Reduce to `rootProject.name = 'asynchronous-mail'`. |
 | M5 | `gradle/wrapper/gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat` | Regenerate for Gradle 8.14.4 with `./gradlew wrapper --gradle-version 8.14.4 --distribution-type bin` (run twice). |
-| M6 | `src/main/groovy/.../AsynchronousMailGrailsPlugin.groovy` | `grailsVersion = "7.0.0 > *"`, `dependsOn = [mail: "* > 5.0.0"]`, add `'mailOauth'` to `loadAfter`. |
+| M6 | `src/main/groovy/.../AsynchronousMailGrailsPlugin.groovy` | `grailsVersion = "7.0.0 > *"`, `dependsOn = [mail: "* > 7.0.14"]` (raised from `> 5.0.0` by the user once the first-party mail plugin was adopted), add `'mailOauth'` to `loadAfter`. |
 | M7 | `src/main/java/.../Validator.java` | javax → jakarta mail imports. |
 | M8 | `AsynchronousMailMessageBuilder.groovy`, `AsynchronousMailMessageBuilderFactory.groovy` | javax → jakarta activation imports. |
 | M9 | `src/integration-test/.../AsyncMailServiceSpec.groovy` | javax → jakarta `@Resource`. |
 | M10 | `grails-app/domain/.../AsynchronousMailMessage.groovy` | Replace `StringUtils.isBlank(x)` with `!x?.trim()` and drop the `org.apache.commons.lang` import. |
 | M11 | `.github/workflows/build.yml`, `gradle-github-publish.yml`, `release.yml` | JDK 11 / 8 → 17. |
-| M12 | `README.md` | Add the Grails 7 installation coordinates (`io.github.gpc:asynchronous-mail:7.6.0-M1`). |
+| M12 | `README.md` | Add the Grails 7 installation coordinates (`io.github.gpc:asynchronous-mail:7.6.0-M2`). |
 | M13 | `CLAUDE.md` | Update the stack description after the upgrade lands. |
 
 ### 3.1 `build.gradle` target shape
@@ -151,8 +151,8 @@ dependencies {
     implementation 'org.apache.grails.views:grails-web-gsp'
     implementation 'org.apache.grails.views:grails-web-gsp-taglib'
 
-    implementation 'org.grails.plugins:grails-mail:5.0.3'
-    implementation 'org.grails.plugins:mail-oauth:7.6.0-M1'
+    implementation 'org.apache.grails:grails-mail'
+    implementation 'org.grails.plugins:mail-oauth:7.6.0-M2'
     implementation 'org.apache.grails:grails-quartz:7.0.16'
     implementation 'commons-validator:commons-validator'   // version to be confirmed against BOM / resolved graph
 
@@ -303,7 +303,7 @@ Grails 6 HEAD (`3c4075b`) run in a throwaway worktree on JDK 17: unit 39 run / 1
 | `./gradlew test` | 39 tests, 0 failed |
 | `./gradlew integrationTest` | 22 tests, 0 failed |
 | `./gradlew clean build` x3 with asset count | OK each run, 2 `META-INF/assets/` entries each time |
-| `./gradlew publishToMavenLocal` | OK, `io.github.gpc:asynchronous-mail:7.6.0-M1` in `~/.m2`, POM shows grails-bom 7.0.16, grails-mail 5.0.3, mail-oauth 7.6.0-M1, grails-quartz 7.0.16 |
+| `./gradlew publishToMavenLocal` | OK, `io.github.gpc:asynchronous-mail:7.6.0-M2` in `~/.m2`, POM shows grails-bom 7.0.16, grails-mail 5.0.3, mail-oauth 7.6.0-M1, grails-quartz 7.0.16 |
 | `./gradlew --version` | Gradle 8.14.4 on JDK 17.0.6 |
 
 ### Still to verify manually (see R2, R6)

@@ -50,8 +50,8 @@ dependencies {
     implementation 'org.apache.grails.views:grails-web-gsp'
     implementation 'org.apache.grails.views:grails-web-gsp-taglib'
 
-    implementation 'org.grails.plugins:grails-mail:5.0.3'
-    implementation 'org.grails.plugins:mail-oauth:7.6.0-M1'
+    implementation 'org.apache.grails:grails-mail'   // first-party mail plugin, BOM-managed ($grailsVersion)
+    implementation 'org.grails.plugins:mail-oauth:7.6.0-M2'   // built on grails-bom 7.0.16 and org.apache.grails:grails-mail
     implementation "org.apache.grails:grails-quartz:$grailsVersion"
     // Used by Validator.java; no longer provided transitively by GORM in Grails 7.
     implementation 'commons-validator:commons-validator:1.9.0'
