@@ -10,3 +10,4 @@ asynchronous.mail.useFlushOnSave=true
 asynchronous.mail.persistence.provider='hibernate5'      // Possible values are 'hibernate', 'hibernate4', 'hibernate5', 'mongodb'
 asynchronous.mail.newSessionOnImmediateSend=false
 asynchronous.mail.taskPoolSize=1
+asynchronous.mail.vpd.enabled=true                     // false: never touch the DB row-security (VPD) context

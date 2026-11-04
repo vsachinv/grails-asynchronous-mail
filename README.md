@@ -27,7 +27,7 @@ To install just add the plugin to the plugins block of `build.gradle`:
 
 For Grails 7.0.x (Java 17, Spring Boot 3, Jakarta EE). Uses the first-party `org.apache.grails:grails-mail` and the `mail-oauth` 7.6.x plugin.
 ```groovy
-implementation "io.github.gpc:asynchronous-mail:7.6.0-M2"
+implementation "io.github.gpc:asynchronous-mail:7.6.0-M3"
 ```
 
 
@@ -93,6 +93,7 @@ asynchronous.mail.useFlushOnSave=true
 asynchronous.mail.persistence.provider='hibernate5'     // Possible values are 'hibernate', 'hibernate4', 'hibernate5', 'mongodb'
 asynchronous.mail.newSessionOnImmediateSend=false
 asynchronous.mail.taskPoolSize=1
+asynchronous.mail.vpd.enabled=true
 ```
 
 If you want to change this options just add options which you want to change to your configuration file `/grails-app/conf/application.groovy` or `/grails-app/conf/application.yml`.
@@ -111,6 +112,7 @@ If you want to change this options just add options which you want to change to 
 |`asynchronous.mail.persistence.provider`|`hibernate5`|The persistence provider. Possible values are `hibernate`, `hibernate3`, `hibernate4`, `hibernate5`, `mongodb`.|
 |`asynchronous.mail.newSessionOnImmediateSend`|`false`|If `true` the new DB session will be created for storing a message into DB. It's needed if you want to send an email in case of error when all changes in DB are rolled back.|
 |`asynchronous.mail.taskPoolSize`|`1`|Max count of parallel tasks for sending messages concurrently.|
+|`asynchronous.mail.vpd.enabled`|`true`|If `false` the plugin never sets or restores the Oracle VPD row-security context; use it in applications whose database has no VPD policy (see below).|
 
 Configure the [mail](https://plugins.grails.org/plugin/grails/mail) plugin. The Asynchronous Mail plugin uses the [mail](https://plugins.grails.org/plugin/grails/mail) plugin for sending messages to the SMTP server.
 
@@ -159,6 +161,40 @@ asyncMailService.sendMail {
 ```
 
 Also see the sample application at <https://github.com/kefirfromperm/grails-asynchronous-mail-sample> (Grails 3).
+
+Multi-tenant row security (Oracle VPD)
+--------------------------------------
+
+Every `async_mail_*` table carries a `tenant_id` and sits behind an Oracle VPD policy. Calls made from your own
+code (`sendMail {}`, the scaffolded controller, direct service calls) always run under the calling thread's tenant
+context; the plugin never changes it there. Only the two Quartz jobs switch the connection to all-tenant mode, and
+only for the duration of their work, through the `VPDContextManager` bean.
+
+The plugin registers `grails.plugin.asyncmail.DefaultVPDContextManager` as the bean `asynchronousMailVPDContextManager`.
+It calls `PKG_MART_SET_CONTEXT.SET_CONTEXT(-99999)` on the current session, runs the closure, and restores the
+context to the tenant of your `tenantContextProvider` bean (or `NULL` on job threads), even if the closure throws.
+Nested scopes on the same thread for the same tenant reuse the active one and do not call the database again;
+a nested scope for a different tenant throws `VPDContextMismatchException`.
+
+If your database has no VPD policy at all, set `asynchronous.mail.vpd.enabled=false`: the manager then runs every
+scope as a plain pass-through and issues no `SET_CONTEXT` calls.
+
+To customise, define your own bean with the same name, for example in `grails-app/conf/spring/resources.groovy`:
+
+```groovy
+import grails.plugin.asyncmail.DefaultVPDContextManager
+
+beans = {
+    asynchronousMailVPDContextManager(DefaultVPDContextManager) {
+        setContextCall = 'call MY_SCHEMA.MY_CTX_PKG.SET_TENANT(?)'
+        tenantContextProvider = ref('tenantContextProvider')
+    }
+}
+```
+
+or implement `grails.plugin.asyncmail.VPDContextManager` yourself. Any implementation must open the scope inside
+the transaction that runs the queries (the context lives on the JDBC connection bound to it), restore the context
+on exit, and treat nested calls on the same thread as no-ops.
 
 The AsynchronousMailController and views
 ----------------------------------------

@@ -30,6 +30,11 @@ class AsynchronousMailProcessServiceSpec extends Specification implements Servic
                 AsynchronousMailMessage.get(id)
             }
         }
+        service.asynchronousMailVPDContextManager = Stub(VPDContextManager) {
+            withAllTenantVPDContext(_) >> { Closure body -> body.call() }
+            withVPDContext(_, _) >> { Long id, Closure body -> body.call() }
+            isScopeActive(_) >> false
+        }
         asynchronousMailConfigService = Stub(AsynchronousMailConfigService) {
             getTaskPoolSize() >> 1
             isUseFlushOnSave() >> true

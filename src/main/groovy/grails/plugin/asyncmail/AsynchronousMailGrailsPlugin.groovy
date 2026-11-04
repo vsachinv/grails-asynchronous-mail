@@ -22,6 +22,8 @@ class AsynchronousMailGrailsPlugin extends Plugin {
             //noinspection GrUnresolvedAccess
             asynchronousMailMessageBuilderFactory(AsynchronousMailMessageBuilderFactory) { it.autowire = true }
             asynchronousMailService(AsynchronousMailService) { it.autowire = true }
+            // Oracle VPD context handling; host apps may override this bean (same name) with their own VPDContextManager
+            asynchronousMailVPDContextManager(DefaultVPDContextManager) { it.autowire = true }
             //noinspection GrUnresolvedAccess
             springConfig.addAlias 'asyncMailService', 'asynchronousMailService'
         }
