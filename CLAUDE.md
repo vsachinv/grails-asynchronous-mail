@@ -110,10 +110,25 @@ Configuration defaults are in `grails-app/conf/plugin.groovy` and read through `
   are preserved as **transient** getters/setters that map onto `toEntries`/`ccEntries`/`bccEntries`/`headerEntries`
   entity collections; keep that public API stable, downstream apps and the scaffolded controller rely on it.
 - Every table carries a non-null `tenant_id`; children copy `tenantId` from the parent message in `beforeValidate`.
-- The tables sit behind an Oracle VPD policy. `AsynchronousMailPersistenceService.setVPDContextForAllTenantAccess()`
-  calls `PKG_MART_SET_CONTEXT.SET_CONTEXT(-99999)` on the *current* session so the background job can see all tenants.
-  It is invoked before every read/write in that service and around each worker loop in the process service.
-  Any new query path must call it too. It rethrows on failure by design; do not swallow that error in production code.
+- The tables sit behind an Oracle VPD policy. VPD handling is the `VPDContextManager` interface (src/main/groovy),
+  default `DefaultVPDContextManager`, registered in `doWithSpring` as bean `asynchronousMailVPDContextManager` so a
+  host app can override it by name (README documents this). `withAllTenantVPDContext { }` calls
+  `PKG_MART_SET_CONTEXT.SET_CONTEXT(-99999)` on the *current* session, runs the closure, then restores the context to
+  the host's `tenantContextProvider` tenant (or `NULL` on job threads), even if the closure throws. The scope is
+  thread-local: nested calls for the same tenant run directly without hitting the DB again, and a nested call for a
+  different tenant throws `VPDContextMismatchException` (nested scopes never switch tenant).
+  It is opened in exactly two places: the Quartz jobs (`AsynchronousMailJob` / `ExpiredMessagesCollectorJob`
+  `execute()`, inside a `withTransaction` around the service call) and `processEmailMessage()` in the process
+  service (one scope per message, inside that message's transaction). The second cannot be folded into the job:
+  worker tasks run on other threads with their own sessions, and a session borrows a different pooled connection
+  for each transaction, so the context must be set inside the transaction that runs the queries. The service
+  methods themselves (`findAndSendEmails`, `updateExpiredMessages`, and the persistence CRUD methods `save`,
+  `getMessage`, `delete`, ...) never touch the VPD context, because `sendMail {}` runs them on the caller's session
+  and connection and switching it to all-tenant mode would override the caller's tenant context. The persistence
+  service only keeps thin delegates (`withAllTenantVPDContext`, `withVPDContext`) plus the deprecated, non-restoring
+  `setVPDContextForAllTenantAccess()`. Set and restore rethrow on failure by design; do not swallow that error.
+  `asynchronous.mail.vpd.enabled=false` (plugin.groovy / `AsynchronousMailConfigService.vpdEnabled`) turns the default
+  manager into a pass-through for host apps without VPD.
 - Schema changes require a Liquibase changelog under `db/changelog/` (Groovy DSL, guarded with `preConditions`),
   consumed by the downstream application, since the plugin itself uses `dbCreate: update` only in tests.
 

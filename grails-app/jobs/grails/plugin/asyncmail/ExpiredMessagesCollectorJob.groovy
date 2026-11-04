@@ -11,10 +11,16 @@ class ExpiredMessagesCollectorJob {
     static group = "AsynchronousMail"
 
     AsynchronousMailPersistenceService asynchronousMailPersistenceService
+    VPDContextManager asynchronousMailVPDContextManager
 
+    /** Job-driven: opens the all-tenant VPD scope inside the transaction that runs the bulk update. */
     def execute() {
         log.trace('Entering execute method.')
-        asynchronousMailPersistenceService.updateExpiredMessages()
+        AsynchronousMailMessage.withTransaction {
+            asynchronousMailVPDContextManager.withAllTenantVPDContext {
+                asynchronousMailPersistenceService.updateExpiredMessages()
+            }
+        }
         log.trace('Exiting execute method.')
     }
 }
