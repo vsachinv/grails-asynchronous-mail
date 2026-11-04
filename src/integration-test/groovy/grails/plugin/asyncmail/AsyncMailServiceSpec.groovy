@@ -23,6 +23,7 @@ class AsyncMailServiceSpec extends Specification {
     void testSendAsynchronousMail() {
         when:
             asyncMailService.sendMail {
+                tenantId 1L
                 to VALUE_MAIL
                 subject 'Test'
                 text 'Test'

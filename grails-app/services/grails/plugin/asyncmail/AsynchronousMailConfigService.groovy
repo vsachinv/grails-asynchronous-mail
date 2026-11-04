@@ -52,5 +52,10 @@ class AsynchronousMailConfigService {
     private int taskPoolSize
     int getTaskPoolSize() { taskPoolSize }
 
+    @Value('${asynchronous.mail.vpd.enabled:true}')
+    private boolean vpdEnabled
+    /** false: the VPDContextManager never sets or restores the DB row-security context (for apps without VPD). */
+    boolean isVpdEnabled() { vpdEnabled }
+
     boolean isMongo() { getPersistenceProvider() == 'mongodb' }
 }
