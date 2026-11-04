@@ -16,6 +16,17 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
 
     @Autowired
     AsynchronousMailPersistenceService asynchronousMailPersistenceService
+    @Autowired
+    VPDContextManager asynchronousMailVPDContextManager
+
+    /** The 6.x test Application has no tenantContextProvider bean; emulate a caller on tenant 1 for the restore. */
+    void setup() {
+        ((DefaultVPDContextManager) asynchronousMailVPDContextManager).tenantContextProvider = [getCurrentTenantId: { -> 1L }]
+    }
+
+    void cleanup() {
+        ((DefaultVPDContextManager) asynchronousMailVPDContextManager).tenantContextProvider = null
+    }
 
     void testCycle() {
         given: "a message"
@@ -126,5 +137,102 @@ class AsynchronousMailPersistenceServiceSpec extends Specification {
 
         then:
             EXPIRED == message.status
+    }
+
+    void "withAllTenantVPDContext switches to all-tenant mode and restores the caller tenant afterwards"() {
+        given:
+            H2VpdContextStub.callCount.set(0)
+            H2VpdContextStub.lastContextId = null
+            Long seenInside = null
+
+        when:
+            String result = asynchronousMailPersistenceService.withAllTenantVPDContext {
+                seenInside = H2VpdContextStub.lastContextId
+                'done'
+            }
+
+        then: 'body ran in all-tenant mode'
+            result == 'done'
+            seenInside == -99999L
+        and: 'context restored to the tenant of the emulated tenantContextProvider (1L)'
+            H2VpdContextStub.lastContextId == 1L
+        and: 'exactly one set and one restore'
+            H2VpdContextStub.callCount.get() == 2
+    }
+
+    void "nested withAllTenantVPDContext calls reuse the active scope and do not set the context again"() {
+        given:
+            H2VpdContextStub.callCount.set(0)
+
+        when:
+            asynchronousMailPersistenceService.withAllTenantVPDContext {
+                asynchronousMailPersistenceService.withAllTenantVPDContext {
+                    asynchronousMailPersistenceService.withAllTenantVPDContext { 'inner' }
+                }
+                asynchronousMailPersistenceService.updateExpiredMessages()
+            }
+
+        then: 'only the outermost scope touched the DB context'
+            H2VpdContextStub.callCount.get() == 2
+            !asynchronousMailVPDContextManager.isScopeActive()
+    }
+
+    void "withAllTenantVPDContext restores the context when the body throws"() {
+        given:
+            H2VpdContextStub.callCount.set(0)
+
+        when:
+            asynchronousMailPersistenceService.withAllTenantVPDContext {
+                throw new IllegalStateException('boom')
+            }
+
+        then:
+            thrown(IllegalStateException)
+            H2VpdContextStub.lastContextId == 1L
+            H2VpdContextStub.callCount.get() == 2
+            !asynchronousMailVPDContextManager.isScopeActive()
+    }
+
+    void "a nested scope for a different tenant fails with a mismatch exception and the outer scope is still restored"() {
+        given:
+            H2VpdContextStub.callCount.set(0)
+
+        when:
+            asynchronousMailVPDContextManager.withAllTenantVPDContext {
+                assert asynchronousMailVPDContextManager.activeTenantId == -99999L
+                assert asynchronousMailVPDContextManager.isScopeActive(-99999L)
+                asynchronousMailVPDContextManager.withVPDContext(42L) { 'must not run' }
+            }
+
+        then:
+            VPDContextMismatchException e = thrown()
+            e.activeTenantId == -99999L
+            e.requestedTenantId == 42L
+            H2VpdContextStub.lastContextId == 1L
+            H2VpdContextStub.callCount.get() == 2
+            !asynchronousMailVPDContextManager.isScopeActive()
+            asynchronousMailVPDContextManager.activeTenantId == null
+    }
+
+    void "withAllTenantVPDContext is a pass-through when asynchronous.mail.vpd.enabled is false"() {
+        given:
+            H2VpdContextStub.callCount.set(0)
+            DefaultVPDContextManager disabled = new DefaultVPDContextManager(
+                    asynchronousMailConfigService: Stub(AsynchronousMailConfigService) { isVpdEnabled() >> false }
+            )
+            boolean scopeSeenInside = true
+
+        when:
+            String result = disabled.withAllTenantVPDContext {
+                scopeSeenInside = disabled.scopeActive
+                'ran'
+            }
+
+        then:
+            result == 'ran'
+            !scopeSeenInside
+            H2VpdContextStub.callCount.get() == 0
+            !disabled.enabled
+            asynchronousMailVPDContextManager.enabled
     }
 }

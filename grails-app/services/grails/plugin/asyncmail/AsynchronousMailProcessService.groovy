@@ -22,7 +22,14 @@ class AsynchronousMailProcessService {
     AsynchronousMailPersistenceService asynchronousMailPersistenceService
     AsynchronousMailSendService asynchronousMailSendService
     AsynchronousMailConfigService asynchronousMailConfigService
+    VPDContextManager asynchronousMailVPDContextManager
 
+    /**
+     * Selects pending ids and fans them out to worker tasks. Runs under the caller's VPD context: AsynchronousMailJob
+     * opens the all-tenant scope around this call so the id select sees every tenant. Each worker task runs on its
+     * own thread, session and connection, so it opens its own all-tenant scope per message transaction
+     * (see {@link #processEmailMessage}); the context cannot be inherited from this thread.
+     */
     void findAndSendEmails() {
         // Get messages from DB
         List<Long> messagesIds = asynchronousMailPersistenceService.selectMessagesIdsForSend()
@@ -47,18 +54,12 @@ class AsynchronousMailProcessService {
                         Long messageId
                         while ((messageId = idsQueue.poll()) != null) {
                             try {
-                                // Set VPD no-tenant context on this new session so that
-                                // getMessage/save/delete can access messages across all tenants
-                                asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
                                 processEmailMessage(messageId)
                             } catch (Exception e) {
                                 log.error(
                                         "An exception was thrown when attempt to send a message with id=${messageId}.",
                                         e
                                 )
-                            }finally {
-                                //Reset Again
-                                asynchronousMailPersistenceService.setVPDContextForAllTenantAccess()
                             }
                         }
 
@@ -77,7 +78,18 @@ class AsynchronousMailProcessService {
         }
     }
 
+    /**
+     * Processes one message in its own transaction, inside a single all-tenant VPD scope on the connection bound
+     * to that transaction, so that getMessage/save/delete can reach the message whatever its tenant. The scope is
+     * opened once here; the persistence methods called below never touch the VPD context themselves.
+     */
     void processEmailMessage(long messageId) {
+        asynchronousMailVPDContextManager.withAllTenantVPDContext {
+            doProcessEmailMessage(messageId)
+        }
+    }
+
+    private void doProcessEmailMessage(long messageId) {
         boolean useFlushOnSave = asynchronousMailConfigService.useFlushOnSave
 
         AsynchronousMailMessage message = asynchronousMailPersistenceService.getMessage(messageId)
